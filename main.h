@@ -4,20 +4,20 @@
 #include <math.h>
 #include <time.h>
 
-#include <GL/freeglut.h>
+#include <GL/glut.h>
 #include <GL/glext.h>
 
 #include <fstream>
 #include <map>
 #include <vector>
 
-#include "../Library/loadpng.h"
-#include "../Library/process_image.h"
+#include "Library/loadpng.h"
+#include "Library/process_image.h"
 
-#include "../Library/gl_texture.h"
+#include "Library/gl_texture.h"
 
-#define WIDTH 600
-#define HEIGHT 600
+#define WIDTH 1366
+#define HEIGHT 768
 
 #define INTERVAL 15
 
@@ -377,7 +377,10 @@ class Model {
         faces.clear();
     }
 
-    void draw() { glCallList(list); }
+    void draw() {
+         
+        glCallList(list); 
+    }
 };
 
 #endif
