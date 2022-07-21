@@ -1,6 +1,9 @@
 #include "main.h"
 #include "functions.h"
 #include <iostream>
+#include "GetImagePath.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image/stb_image.h"
 
 #define PI 3.141
 
@@ -18,7 +21,9 @@ std::string uranus_file = "Models/Uranus.obj";
 std::string neptune_file = "Models/Neptune.obj";
 std::string trump_file = "Models/Trump.obj";
 
-GLfloat light_pos[] = {0.0f, 0.0f, 300.00f, 2.0f};
+GLfloat light_pos[] = {0.0f, 0.0f, 500.00f, 1.0f};
+
+void loadIntroScene(void);
 
 float pos_x, pos_y, pos_z;
 float angle_x = 0.0f, angle_y = 0.0f;
@@ -30,6 +35,10 @@ float zoom_per_scroll;
 bool is_holding_mouse = false;
 bool is_updated = false;
 int multiplier = 2;
+
+int intro_pos_anim_z = 0;
+
+int intro_screen = true;
 
 Model model;
 Model earth;
@@ -85,9 +94,14 @@ int planet_enabled = 0x000000FF;
 int orbit_enabled = 0x000000FF;
 int individual_planet = 0x00000001;
 bool first = true;
-
+unsigned int introBG;
 void menu(int val);
 void createMenu();
+int first_intro = true;
+
+int intro_pos_anim_z_1 = 0.0;
+int intro_pos_anim_z_2 = 0.0;
+int intro_pos_anim_z_3 = 0.0;
 
 void init() {
     glEnable(GL_LIGHTING);
@@ -97,7 +111,7 @@ void init() {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(20.0, 1.7, 1.0, 2000.0);
-    gluLookAt(0.0,0.0,100.0,0.0,0.0,0.0,0.0,1.0,0.0);
+    gluLookAt(0.0,0.0,200.0,0.0,0.0,0.0,0.0,1.0,0.0);
     glMatrixMode(GL_MODELVIEW);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -255,61 +269,99 @@ void Neptune()
 
 void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
-    if (!(individual_planet & 0x10000000)) {
-        GLuint list;
-        list = glGenLists(1);
-        glNewList(list, GL_COMPILE);
-        glLoadIdentity();
-        glPushMatrix();
-        DrawCircle(offset_x, offset_y, mercury_functions->GetRadius(), 20);
-        DrawCircle(offset_x, offset_y, venus_functions->GetRadius(), 20);
-        DrawCircle(offset_x, offset_y, earth_functions->GetRadius(), 30);
-        DrawCircle(offset_x, offset_y, mars_functions->GetRadius(), 30);
-        DrawCircle(offset_x, offset_y, jupiter_functions->GetRadius(), 30);
-        DrawCircle(offset_x, offset_y, saturn_functions->GetRadius(), 30);
-        DrawCircle(offset_x, offset_y, uranus_functions->GetRadius(), 30);
-        DrawCircle(offset_x, offset_y, neptune_functions->GetRadius(), 30);
-        glTranslatef(offset_x, offset_y, pos_z);
-        glRotatef(angle_x, 1.0f, 0.0f, 0.0f);
-        // glRotatef(angle_y, 0.0f, 1.0f, 0.0f);
-        model.draw();
-        glPopMatrix();
-        if (planet_enabled & 0x00000004) Earth();
-        if (planet_enabled & 0x00000001) Mercury();
-        if (planet_enabled & 0x00000002)Venus();
-        if (planet_enabled & 0x00000008)Mars();
-        if (planet_enabled & 0x00000010)Jupiter();
-        if (planet_enabled & 0x00000020)Saturn();
-        if (planet_enabled & 0x00000040)Uranus();
-        if (planet_enabled & 0x00000080)Neptune();
-        glEndList();
-        glCallList(list);
+
+    if (intro_screen)
+    {
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        if (intro_pos_anim_z > -1500)
+            intro_pos_anim_z -= 25.0;
+        if (intro_pos_anim_z_1 > -1500)
+            intro_pos_anim_z_1 -= 15.0;
+        if (intro_pos_anim_z_2 > -1500)
+            intro_pos_anim_z_2 -= 10.0;
+        if (intro_pos_anim_z_3 > -1500)
+            intro_pos_anim_z_3 -= 8.0;
+        glEnable(GL_TEXTURE_2D);
+        glColor3f(1, 1, 1);
+        glBindTexture(GL_TEXTURE_2D, introBG);
+        glBegin(GL_QUADS);
+        glVertex3f(-400, -300, intro_pos_anim_z);
+        glTexCoord3f(1, 1,1.0);
+        glVertex3f(-400, 300, intro_pos_anim_z_1);
+        glTexCoord3f(0, 1,1.0);
+        glVertex3f(400, 300,intro_pos_anim_z_2);
+        glTexCoord3f(0, 0,1.0);
+        glVertex3f(400, -300, intro_pos_anim_z_3);
+        glTexCoord3f(1, 0,1.0);
+        glEnd();
+        if (first_intro)
+        {
+            glRotatef(180.0,0.0,0.0,1.0);
+            glTranslatef(0.0,0.0,0.0);
+            first_intro = false;
+        }
+        glFlush();
+
+        glDisable(GL_TEXTURE_2D);
     }
     else
     {
-        glLoadIdentity();
-        glPushMatrix();
-        glTranslatef(6.0,0.0,30.0);
-        glScalef(4.0,4.0,4.0);
-        glRotatef(30.0, 0.0,1.0,0.0);
-        trump.draw();
-        glPopMatrix();
-        glPushMatrix();
-        drawText(earth_functions->GetFact(selected), 12, 5);
-        glTranslatef(pos_x, pos_y, pos_z + 80.0);
-        glScalef(1.0,1.0,1.0);
-        glRotatef(angle_x, 1.0f, 0.0f, 0.0f);
-        glRotatef(angle_y, 0.0f, 1.0f, 0.0f);
-        if (individual_planet & 0x00000004) earth.draw();
-        if (individual_planet & 0x00000001) mercury.draw();
-        if (individual_planet & 0x00000002) venus.draw();
-        if (individual_planet & 0x00000008) mars.draw();
-        if (individual_planet & 0x00000010) jupiter.draw();
-        if (individual_planet & 0x00000020) saturn.draw();
-        if (individual_planet & 0x00000040) uranus.draw();
-        if (individual_planet & 0x00000080) neptune.draw();
-        glPopMatrix();
+        glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
+        if (!(individual_planet & 0x10000000)) {
+            GLuint list;
+            list = glGenLists(1);
+            glNewList(list, GL_COMPILE);
+            glLoadIdentity();
+            glPushMatrix();
+            DrawCircle(offset_x, offset_y, mercury_functions->GetRadius(), 20);
+            DrawCircle(offset_x, offset_y, venus_functions->GetRadius(), 20);
+            DrawCircle(offset_x, offset_y, earth_functions->GetRadius(), 30);
+            DrawCircle(offset_x, offset_y, mars_functions->GetRadius(), 30);
+            DrawCircle(offset_x, offset_y, jupiter_functions->GetRadius(), 30);
+            DrawCircle(offset_x, offset_y, saturn_functions->GetRadius(), 30);
+            DrawCircle(offset_x, offset_y, uranus_functions->GetRadius(), 30);
+            DrawCircle(offset_x, offset_y, neptune_functions->GetRadius(), 30);
+            glTranslatef(offset_x, offset_y, pos_z);
+            glRotatef(angle_x, 1.0f, 0.0f, 0.0f);
+            // glRotatef(angle_y, 0.0f, 1.0f, 0.0f);
+            model.draw();
+            glPopMatrix();
+            if (planet_enabled & 0x00000004) Earth();
+            if (planet_enabled & 0x00000001) Mercury();
+            if (planet_enabled & 0x00000002)Venus();
+            if (planet_enabled & 0x00000008)Mars();
+            if (planet_enabled & 0x00000010)Jupiter();
+            if (planet_enabled & 0x00000020)Saturn();
+            if (planet_enabled & 0x00000040)Uranus();
+            if (planet_enabled & 0x00000080)Neptune();
+            glEndList();
+            glCallList(list);
+        }
+        else
+        {
+            glLoadIdentity();
+            glPushMatrix();
+            glTranslatef(6.0,0.0,30.0);
+            glScalef(4.0,4.0,4.0);
+            glRotatef(30.0, 0.0,1.0,0.0);
+            trump.draw();
+            glPopMatrix();
+            glPushMatrix();
+            drawText(earth_functions->GetFact(selected), 12, 5);
+            glTranslatef(pos_x, pos_y, pos_z + 80.0);
+            glScalef(1.0,1.0,1.0);
+            glRotatef(angle_x, 1.0f, 0.0f, 0.0f);
+            glRotatef(angle_y, 0.0f, 1.0f, 0.0f);
+            if (individual_planet & 0x00000004) earth.draw();
+            if (individual_planet & 0x00000001) mercury.draw();
+            if (individual_planet & 0x00000002) venus.draw();
+            if (individual_planet & 0x00000008) mars.draw();
+            if (individual_planet & 0x00000010) jupiter.draw();
+            if (individual_planet & 0x00000020) saturn.draw();
+            if (individual_planet & 0x00000040) uranus.draw();
+            if (individual_planet & 0x00000080) neptune.draw();
+            glPopMatrix();
+        }
     }
     glutSwapBuffers();
 }
@@ -385,6 +437,7 @@ void motion(int x, int y) {
 
 void keys(unsigned char c, int x, int y)
 {
+    if (c == '1') intro_screen = false;
     if (c == 'z') multiplier++;
     if (c == 'x')
     {
@@ -424,6 +477,7 @@ int main(int argc, char **argv) {
     glutInitWindowSize(WIDTH, HEIGHT);
     glutCreateWindow("Load Model");
     init();
+    loadIntroScene();
     glutDisplayFunc(display);
     createMenu();
     glutAttachMenu(GLUT_RIGHT_BUTTON);
@@ -480,4 +534,101 @@ void createMenu()
     glutAddMenuEntry("Individual Planet", 0x10000001);
     glutAddSubMenu("Enable", enable_menu);
 	glutAddSubMenu("Disable", disable_menu);
+}
+
+
+
+void loadIntroScene(void)
+{
+
+
+    glGenTextures(1,&introBG);
+    glBindTexture(GL_TEXTURE_2D,introBG);
+
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+    int width = 0, height = 0,channels = 0;
+
+
+    GetImagePath getImagePath;
+    string p = "\\final-intro.bmp";
+    char *path = (char*)p.c_str();
+
+    path = getImagePath.getPath(&path,false);
+    printf("\nPath is %s\n",path);
+    unsigned char *data = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
+
+    // unsigned char *data = stbi_load("C:\\Users\\Hp\\CGV\\Achievements-of-ISRO-opengl-project\\final-intro.psd", &width, &height, &channels, STBI_rgb_alpha);
+
+    printf("Loaded image with a width of %dpx, a height of %dpx and %d channels\n", width, height, channels);
+
+    if(data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+    }
+    else
+    {
+    
+        std::cout << "Failed to load intro slide" << std::endl;
+    }
+    stbi_image_free(data);
+    std::cout << "done" << std::endl;
+
+
+    /* Night background loading */
+    // glGenTextures(1,&nightBG);
+    // glBindTexture(GL_TEXTURE_2D,nightBG);
+
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+    // path = "\\images\\psds\\nightBG.psd";
+    // path = getImagePath.getPath(&path,false);
+    // //printf("\nAB image 1 Path is %s\n",path);
+    // data = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
+    // // printf("Loaded image with a width of %dpx, a height of %dpx and %d channels\n", width, height, channels);
+
+    // if(data)
+    // {
+    //     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    //     std::cout << "done loading NIGHT BG" << std::endl;
+    // }
+    // else
+    // {
+    //     std::cout << "Failed to load NIGHT BG" << std::endl;
+    // }
+    // stbi_image_free(data);
+
+
+    // /* END background loading */
+    // glGenTextures(1,&endBG);
+    // glBindTexture(GL_TEXTURE_2D,endBG);
+
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+    // path = "\\images\\psds\\ending.psd";
+    // path = getImagePath.getPath(&path,false);
+    // //printf("\nAB image 1 Path is %s\n",path);
+    // data = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
+    // // printf("Loaded image with a width of %dpx, a height of %dpx and %d channels\n", width, height, channels);
+
+    // if(data)
+    // {
+    //     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    //     std::cout << "done loading END BG" << std::endl;
+    // }
+    // else
+    // {
+    //     std::cout << "Failed to load END BG" << std::endl;
+    // }
+    // stbi_image_free(data);
 }
